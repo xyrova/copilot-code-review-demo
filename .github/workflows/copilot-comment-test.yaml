@@ -1,0 +1,21 @@
+name: Test Copilot Comment
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  inspect:
+    if: github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Show comment information
+        run: |
+          echo "Author: ${{ github.event.comment.user.login }}"
+          echo "Comment:"
+          echo "${{ github.event.comment.body }}"
+
+      - name: Show PR number
+        run: |
+          echo "PR: ${{ github.event.issue.number }}"
