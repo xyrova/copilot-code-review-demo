@@ -1,0 +1,14 @@
+name: Welcome
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    welcome:
+        name: Greetings
+        runs-on: ubuntu-22.04
+        steps:
+        -   name: Welcome Message
+            run:    |
+                echo "Welcome to copilot review"
