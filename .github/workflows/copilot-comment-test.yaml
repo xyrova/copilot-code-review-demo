@@ -1,21 +1,43 @@
-name: Test Copilot Comment
+name: Test Copilot Events
 
 on:
   issue_comment:
     types: [created]
 
+  pull_request_review:
+    types: [submitted]
+
+  pull_request_review_comment:
+    types: [created]
+
 jobs:
   inspect:
-    if: github.event.issue.pull_request != null
     runs-on: ubuntu-latest
 
     steps:
-      - name: Show comment information
+      - name: Show event
         run: |
-          echo "Author: ${{ github.event.comment.user.login }}"
-          echo "Comment:"
+          echo "EVENT: ${{ github.event_name }}"
+          echo "ACTION: ${{ github.event.action }}"
+
+      - name: Show review information
+        if: github.event_name == 'pull_request_review'
+        run: |
+          echo "REVIEW STATE: ${{ github.event.review.state }}"
+          echo "REVIEWER: ${{ github.event.review.user.login }}"
+          echo "REVIEW BODY:"
+          echo "${{ github.event.review.body }}"
+
+      - name: Show review comment information
+        if: github.event_name == 'pull_request_review_comment'
+        run: |
+          echo "COMMENT AUTHOR: ${{ github.event.comment.user.login }}"
+          echo "COMMENT:"
           echo "${{ github.event.comment.body }}"
 
-      - name: Show PR number
+      - name: Show issue comment information
+        if: github.event_name == 'issue_comment'
         run: |
-          echo "PR: ${{ github.event.issue.number }}"
+          echo "COMMENT AUTHOR: ${{ github.event.comment.user.login }}"
+          echo "COMMENT:"
+          echo "${{ github.event.comment.body }}"
