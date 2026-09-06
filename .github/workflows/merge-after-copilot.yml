@@ -20,5 +20,6 @@ jobs:
           PR_NUMBER: ${{ github.event.client_payload.pr_number }}
         run: |
           gh pr merge "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
             --squash \
             --auto
