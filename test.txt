@@ -1,2 +1,1 @@
-Testing code review from Copilot
-Testing comment from Copilot
+Testing Auto merge after successful code review from copilot
