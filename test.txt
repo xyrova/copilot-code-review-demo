@@ -1,1 +1,2 @@
-Testing Auto merge after successful code review from copilot
+Testing auto-merge after successful code review from GitHub Copilot.
+This is test 1.
