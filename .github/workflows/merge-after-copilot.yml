@@ -22,7 +22,7 @@ jobs:
           gh pr review "$PR_NUMBER" \
             --repo "${{ github.repository }}" \
             --approve \
-            --body "LGTM, approved"
+            --body $'/lgtm\n\n/approve'
 
       - name: Merge PR and delete branch
         env:
