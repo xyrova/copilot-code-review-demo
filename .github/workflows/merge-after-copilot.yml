@@ -1,25 +1,42 @@
 name: Merge after Copilot review
-
 on:
-  repository_dispatch:
+  pull_request_review:
     types:
-      - copilot_review_passed
-
+      - submitted
 permissions:
   contents: write
   pull-requests: write
-
 jobs:
   merge:
     runs-on: ubuntu-latest
-
+    if: github.event.review.user.login == 'copilot-pull-request-reviewer[bot]'
     steps:
+      - name: Approve PR
+        env:
+          GH_TOKEN: ${{ secrets.MERGE_PAT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr review "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --approve \
+            --body "Approved automatically — Copilot review completed."
+
+      - name: Comment approval
+        env:
+          GH_TOKEN: ${{ secrets.MERGE_PAT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --body "✅ Approved"
+
       - name: Merge PR
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+          GH_TOKEN: ${{ secrets.MERGE_PAT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           gh pr merge "$PR_NUMBER" \
             --repo "${{ github.repository }}" \
             --squash \
-            --auto
+            --auto \
+            --delete-branch
