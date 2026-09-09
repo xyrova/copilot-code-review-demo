@@ -13,23 +13,61 @@ jobs:
   merge:
     runs-on: ubuntu-latest
 
+    env:
+      GH_TOKEN: ${{ secrets.REVIEWER_PAT }}
+      PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+      REPO: ${{ github.repository }}
+
     steps:
-      - name: Approve PR
-        env:
-          GH_TOKEN: ${{ secrets.REVIEWER_PAT }}
-          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+      - name: Validate PR number
         run: |
+          set -euo pipefail
+          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "::error::client_payload.pr_number is missing or not a valid PR number: '$PR_NUMBER'"
+            exit 1
+          fi
+
+      - name: Validate PR state
+        run: |
+          set -euo pipefail
+          pr_json=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json state,isDraft)
+          state=$(echo "$pr_json" | jq -r '.state')
+          is_draft=$(echo "$pr_json" | jq -r '.isDraft')
+
+          if [[ "$state" != "OPEN" ]]; then
+            echo "::error::PR #$PR_NUMBER is not open (state: $state)"
+            exit 1
+          fi
+
+          if [[ "$is_draft" == "true" ]]; then
+            echo "::error::PR #$PR_NUMBER is a draft and cannot be merged"
+            exit 1
+          fi
+
+      - name: Validate status checks
+        run: |
+          set -euo pipefail
+          checks_json=$(gh pr checks "$PR_NUMBER" --repo "$REPO" --json state,name 2>/dev/null || echo "[]")
+          failing=$(echo "$checks_json" | jq -r '[.[] | select(.state == "FAILURE" or .state == "ERROR")] | length')
+
+          if [[ "$failing" -gt 0 ]]; then
+            echo "::error::PR #$PR_NUMBER has $failing failing check(s)"
+            echo "$checks_json" | jq -r '.[] | select(.state == "FAILURE" or .state == "ERROR") | "  - \(.name): \(.state)"'
+            exit 1
+          fi
+
+      - name: Approve PR
+        run: |
+          set -euo pipefail
           gh pr review "$PR_NUMBER" \
-            --repo "${{ github.repository }}" \
+            --repo "$REPO" \
             --approve \
             --body $'/lgtm\n\n/approve'
 
       - name: Merge PR and delete branch
-        env:
-          GH_TOKEN: ${{ secrets.REVIEWER_PAT }}
-          PR_NUMBER: ${{ github.event.client_payload.pr_number }}
         run: |
+          set -euo pipefail
           gh pr merge "$PR_NUMBER" \
-            --repo "${{ github.repository }}" \
+            --repo "$REPO" \
             --squash \
             --delete-branch
