@@ -62,11 +62,11 @@ jobs:
         run: |
           set -euo pipefail
           checks_json=$(gh pr checks "$PR_NUMBER" --repo "$REPO" --json state,name 2>/dev/null || echo "[]")
-          not_passed=$(echo "$checks_json" | jq -r '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED")] | length')
+          not_passed=$(echo "$checks_json" | jq -r '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED" and .state != "NEUTRAL")] | length')
 
           if [[ "$not_passed" -gt 0 ]]; then
             echo "::error::PR #$PR_NUMBER has $not_passed non-passing check(s)"
-            echo "$checks_json" | jq -r '.[] | select(.state != "SUCCESS" and .state != "SKIPPED") | "  - \(.name): \(.state)"'
+            echo "$checks_json" | jq -r '.[] | select(.state != "SUCCESS" and .state != "SKIPPED" and .state != "NEUTRAL") | "  - \(.name): \(.state)"'
             exit 1
           fi
 
@@ -76,7 +76,7 @@ jobs:
           gh pr review "$PR_NUMBER" \
             --repo "$REPO" \
             --approve \
-            --body $'/lgtm\n\n/approve'
+            --body 'LGTM'
 
       - name: Merge PR and delete branch
         run: |
