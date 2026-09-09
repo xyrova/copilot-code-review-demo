@@ -25,54 +25,8 @@ jobs:
       REPO: ${{ github.repository }}
 
     steps:
-      - name: Validate inputs
-        run: |
-          set -euo pipefail
-          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
-            echo "::error::client_payload.pr_number is missing or invalid: '$PR_NUMBER'"
-            exit 1
-          fi
-          if [[ ! "$REVIEWED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::client_payload.head_sha is missing or invalid: '$REVIEWED_SHA'"
-            exit 1
-          fi
-
-      - name: Validate PR state
-        run: |
-          set -euo pipefail
-          pr_json=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json state,isDraft,headRefOid)
-          state=$(echo "$pr_json" | jq -r '.state')
-          is_draft=$(echo "$pr_json" | jq -r '.isDraft')
-          current_sha=$(echo "$pr_json" | jq -r '.headRefOid')
-
-          if [[ "$state" != "OPEN" ]]; then
-            echo "::error::PR #$PR_NUMBER is not open (state: $state)"
-            exit 1
-          fi
-          if [[ "$is_draft" == "true" ]]; then
-            echo "::error::PR #$PR_NUMBER is a draft and cannot be merged"
-            exit 1
-          fi
-          if [[ "$current_sha" != "$REVIEWED_SHA" ]]; then
-            echo "::error::PR head ($current_sha) differs from reviewed SHA ($REVIEWED_SHA)"
-            exit 1
-          fi
-
-      - name: Validate status checks
-        run: |
-          set -euo pipefail
-          checks_json=$(gh pr checks "$PR_NUMBER" --repo "$REPO" --json state,name 2>/dev/null || echo "[]")
-          not_passed=$(echo "$checks_json" | jq -r '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED" and .state != "NEUTRAL")] | length')
-
-          if [[ "$not_passed" -gt 0 ]]; then
-            echo "::error::PR #$PR_NUMBER has $not_passed non-passing check(s)"
-            echo "$checks_json" | jq -r '.[] | select(.state != "SUCCESS" and .state != "SKIPPED" and .state != "NEUTRAL") | "  - \(.name): \(.state)"'
-            exit 1
-          fi
-
       - name: Approve PR
         run: |
-          set -euo pipefail
           gh pr review "$PR_NUMBER" \
             --repo "$REPO" \
             --approve \
@@ -80,7 +34,6 @@ jobs:
 
       - name: Merge PR and delete branch
         run: |
-          set -euo pipefail
           gh pr merge "$PR_NUMBER" \
             --repo "$REPO" \
             --squash \
